@@ -1,0 +1,27 @@
+[Unit]
+Description=packetrank Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=packetrank
+WorkingDirectory=/opt/packetrank
+ExecStart=/usr/local/bin/node dist/index.js
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=packetrank
+
+# Variáveis de ambiente — ajuste conforme necessário
+EnvironmentFile=/opt/packetrank/.env
+
+# Hardening básico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/packetrank
+
+[Install]
+WantedBy=multi-user.target
