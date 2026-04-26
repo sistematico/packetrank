@@ -1,0 +1,19 @@
+[Unit]
+Description=PacketRank Discord.js Bot
+After=network.target
+
+[Service]
+Type=simple
+User=nginx
+WorkingDirectory=/var/www/packetrank
+ExecStart=/home/nginx/.local/share/pnpm/pnpm run start
+Restart=always
+RestartSec=5s
+StartLimitBurst=5
+
+# Segurança (ajustado para permitir home)
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
