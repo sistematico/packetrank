@@ -57,7 +57,11 @@ Punição                       -10 pts
 // Guard de permissão
 // ---------------------------------------------------------------------------
 async function hasPermission(interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<boolean> {
-  const guild = interaction.guild as Guild | null
+  const partialGuild = interaction.guild as Guild | null
+  if (!partialGuild) return false
+
+  // Garante que a guild está totalmente carregada (ownerId pode estar vazio em guilds parciais)
+  const guild = await partialGuild.fetch().catch(() => null)
   if (!guild) return false
 
   // Owner do servidor sempre pode

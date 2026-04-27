@@ -63,6 +63,22 @@ ALLOWED_ROLE_ID=
 
 > **Dica de desenvolvimento:** defina `DISCORD_GUILD_ID` com o ID do seu servidor de testes para que os slash commands apareçam instantaneamente, sem a espera de até 1 hora do registro global.
 
+### Como obter o `ALLOWED_ROLE_ID`
+
+`ALLOWED_ROLE_ID` é o ID de um cargo (role) do seu servidor Discord que terá permissão para usar `/nova-partida`. O owner do servidor **sempre** tem permissão, independentemente dessa variável.
+
+**Passo a passo:**
+
+1. No Discord, vá em **Configurações do usuário → Avançado** e ative o **Modo desenvolvedor**.
+2. Acesse as configurações do seu servidor → **Cargos**.
+3. Clique com o botão direito no cargo desejado (ex: `Admin`, `Moderador`) → **Copiar ID do cargo**.
+4. Cole esse valor em `ALLOWED_ROLE_ID` no seu `.env`:
+   ```env
+   ALLOWED_ROLE_ID=123456789012345678
+   ```
+
+> Se `ALLOWED_ROLE_ID` não for definido, apenas o owner do servidor poderá usar `/nova-partida`.
+
 ---
 
 ## Instalação e execução
