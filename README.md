@@ -153,19 +153,39 @@ Registra uma nova partida de Among Us. Abre um fluxo interativo via botões e mo
 
 O bot consome as seguintes rotas HTTP da aplicação Next.js:
 
-| Método | Rota                     | Corpo (JSON)           | Descrição                                                           |
-|--------|--------------------------|------------------------|---------------------------------------------------------------------|
-| GET    | `/api/matches`           | —                      | Lista todas as partidas registradas                                 |
-| GET    | `/api/matches/last`      | —                      | Retorna a última partida registrada                                 |
-| GET    | `/api/matches/:id`       | —                      | Retorna uma partida específica pelo ID                              |
-| **POST** | **`/api/matches`**     | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações    |
-| GET    | `/api/rank/:discordId`   | —                      | Rank individual pelo Discord ID do jogador                          |
-| GET    | `/api/ranking/last`      | —                      | Ranking da última partida registrada                                |
-| GET    | `/api/ranking/overall`   | —                      | Ranking geral acumulado de todas as partidas                        |
+| Método   | Rota                        | Query params                  | Corpo (JSON)            | Descrição                                                        |
+|----------|-----------------------------|-------------------------------|-------------------------|------------------------------------------------------------------|
+| GET      | `/api/bot/partidas`         | —                             | —                       | Lista todas as partidas registradas                              |
+| GET      | `/api/bot/partida`          | `id` *(opcional)*             | —                       | Retorna a última partida ou uma específica pelo ID               |
+| **POST** | **`/api/bot/partida`**      | —                             | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações  |
+| GET      | `/api/bot/rank`             | `player` *(Discord ID)*       | —                       | Rank individual de um jogador pelo Discord ID                    |
+| GET      | `/api/bot/rankings`         | `tipo` (`ultima` \| `geral`)  | —                       | Ranking da última partida (`ultima`) ou acumulado (`geral`)      |
 
 > As rotas ainda estão em desenvolvimento no site. Enquanto não existem, o bot usa **dados de mockup** automáticos (ative com `USE_MOCK_API=true` ou simplesmente não defina `API_BASE_URL`).
 
-### `POST /api/matches` — Corpo da requisição (`SubmitMatch`)
+### `GET /api/bot/partidas` → `Match[]`
+
+Retorna array com todas as partidas registradas (sem paginação).
+
+### `GET /api/bot/partida` → `Match`
+
+| Query param | Tipo   | Obrigatório | Descrição                                         |
+|-------------|--------|-------------|---------------------------------------------------|
+| `id`        | string | não         | ID da partida. Se omitido, retorna a última.      |
+
+### `GET /api/bot/rank` → `PlayerRank`
+
+| Query param | Tipo   | Obrigatório | Descrição                                         |
+|-------------|--------|-------------|---------------------------------------------------|
+| `player`    | string | sim         | Discord ID do jogador (ex: `123456789012345678`). |
+
+### `GET /api/bot/rankings` → `LastMatchRanking` | `OverallRanking`
+
+| Query param | Tipo   | Obrigatório | Valores             | Descrição                                         |
+|-------------|--------|-------------|---------------------|---------------------------------------------------|
+| `tipo`      | string | não         | `ultima` · `geral`  | Tipo do ranking. Padrão: `ultima`.                |
+
+### `POST /api/bot/partida` — Corpo da requisição (`SubmitMatch`)
 
 ```ts
 {
@@ -175,12 +195,12 @@ O bot consome as seguintes rotas HTTP da aplicação Next.js:
     discordId: string          // Discord ID do jogador
     name: string               // Nome de exibição
     role: 'impostor' | 'tripulante'
-    kills: number              // Nº de kills (impostores)
+    kills: number              // Nº de kills (somente impostores)
     died: boolean              // O jogador morreu na partida
     won: boolean               // O time do jogador venceu
     wonBySabotage: boolean     // Impostor venceu por sabotagem (+2 bônus)
     lostBySabotage: boolean    // Tripulante perdeu por sabotagem (-5)
-    ejectedCrewmate: boolean   // Botão ejetou tripulante (+1)
+    ejectedCrewmate: boolean   // Botão de impostor ejetou tripulante (+1)
     kited: boolean             // Kitar ou cair (-5)
     punished: boolean          // Punição administrativa (-10)
     correctVotes: number       // Votos corretos em reuniões (+3 cada)
@@ -221,9 +241,9 @@ Authorization: Bearer <API_TOKEN>
 | Voto Errado                             | −4 pts  |
 | Punição administrativa                  | −10 pts |
 
-### Formato das demais respostas
+### Formato das respostas de leitura
 
-#### `GET /api/matches/last` → `Match`
+#### `GET /api/bot/partida` → `Match`
 
 ```ts
 {
@@ -246,7 +266,7 @@ Authorization: Bearer <API_TOKEN>
 }
 ```
 
-#### `GET /api/rank/:discordId` → `PlayerRank`
+#### `GET /api/bot/rank` → `PlayerRank`
 
 ```ts
 {
@@ -264,7 +284,7 @@ Authorization: Bearer <API_TOKEN>
 }
 ```
 
-#### `GET /api/ranking/last` → `LastMatchRanking`
+#### `GET /api/bot/rankings?tipo=ultima` → `LastMatchRanking`
 
 ```ts
 {
@@ -283,7 +303,7 @@ Authorization: Bearer <API_TOKEN>
 }
 ```
 
-#### `GET /api/ranking/overall` → `OverallRanking`
+#### `GET /api/bot/rankings?tipo=geral` → `OverallRanking`
 
 ```ts
 {

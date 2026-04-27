@@ -88,13 +88,13 @@ const useMock = process.env.USE_MOCK_API === 'true' || !process.env.API_BASE_URL
 
 export async function getMatches(): Promise<Match[]> {
   if (useMock) return MOCK_MATCHES
-  return apiFetch<Match[]>('/api/matches')
+  return apiFetch<Match[]>('/api/bot/partidas')
 }
 
 export async function getMatch(id: string): Promise<Match | null> {
   if (useMock) return MOCK_MATCHES.find(m => m.id === id) ?? null
   try {
-    return await apiFetch<Match>(`/api/matches/${id}`)
+    return await apiFetch<Match>(`/api/bot/partida?id=${encodeURIComponent(id)}`)
   } catch {
     return null
   }
@@ -103,7 +103,7 @@ export async function getMatch(id: string): Promise<Match | null> {
 export async function getLastMatch(): Promise<Match | null> {
   if (useMock) return MOCK_MATCHES[0] ?? null
   try {
-    return await apiFetch<Match>('/api/matches/last')
+    return await apiFetch<Match>('/api/bot/partida')
   } catch {
     return null
   }
@@ -112,7 +112,7 @@ export async function getLastMatch(): Promise<Match | null> {
 export async function getPlayerRank(discordId: string): Promise<PlayerRank | null> {
   if (useMock) return MOCK_PLAYER_RANKS.find(r => r.player.discordId === discordId) ?? null
   try {
-    return await apiFetch<PlayerRank>(`/api/rank/${discordId}`)
+    return await apiFetch<PlayerRank>(`/api/bot/rank?player=${encodeURIComponent(discordId)}`)
   } catch {
     return null
   }
@@ -135,7 +135,7 @@ export async function getLastMatchRanking(): Promise<LastMatchRanking | null> {
       }))
     return { matchId: last.id, map: last.map, playedAt: last.endedAt, entries }
   }
-  return apiFetch<LastMatchRanking>('/api/ranking/last')
+  return apiFetch<LastMatchRanking>('/api/bot/rankings?tipo=ultima')
 }
 
 export async function getOverallRanking(): Promise<OverallRanking | null> {
@@ -154,9 +154,9 @@ export async function getOverallRanking(): Promise<OverallRanking | null> {
     }))
     return { entries, totalMatches: MOCK_MATCHES.length, updatedAt: new Date().toISOString() }
   }
-  return apiFetch<OverallRanking>('/api/ranking/overall')
+  return apiFetch<OverallRanking>('/api/bot/rankings?tipo=geral')
 }
 
 export async function submitMatch(payload: SubmitMatch): Promise<SubmitMatchResponse> {
-  return apiPost<SubmitMatchResponse>('/api/matches', payload)
+  return apiPost<SubmitMatchResponse>('/api/bot/partida', payload)
 }
