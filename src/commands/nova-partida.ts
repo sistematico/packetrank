@@ -21,6 +21,7 @@ import {
   TextInputStyle,
   EmbedBuilder,
   Colors,
+  MessageFlags,
   ButtonInteraction,
   ModalSubmitInteraction,
   ComponentType,
@@ -251,7 +252,7 @@ function buildSummaryEmbed(session: MatchSession): EmbedBuilder {
 // ---------------------------------------------------------------------------
 export async function execute(interaction: ChatInputCommandInteraction): Promise<void> {
   if (!(await hasPermission(interaction))) {
-    await interaction.reply({ content: '🚫 Você não tem permissão para registrar partidas.', ephemeral: true })
+    await interaction.reply({ content: '🚫 Você não tem permissão para registrar partidas.', flags: MessageFlags.Ephemeral })
     return
   }
 
@@ -270,7 +271,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     .setDescription('Clique em **Iniciar registro** para preencher os dados da partida.\n\nTabela de pontuação:\n' + POINTS_TABLE)
     .setFooter({ text: 'Somente usuários autorizados podem registrar partidas.' })
 
-  const reply = await interaction.reply({ embeds: [embed], components: [infoRow], ephemeral: true, fetchReply: true })
+  const reply = await interaction.reply({ embeds: [embed], components: [infoRow], flags: MessageFlags.Ephemeral, fetchReply: true })
 
   // ---- Coletor de botões e modais ----------------------------------------
   const collector = reply.createMessageComponentCollector({
@@ -300,7 +301,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         sessions.set(sessionKey, session)
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Erro desconhecido'
-        await modalSubmit.reply({ content: `❌ ${msg}`, ephemeral: true })
+        await modalSubmit.reply({ content: `❌ ${msg}`, flags: MessageFlags.Ephemeral })
         return
       }
 
@@ -318,7 +319,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     if (btn.customId === 'btn_add_player') {
       const currentSession = sessions.get(sessionKey)
       if (!currentSession) {
-        await btn.reply({ content: '❌ Sessão expirada. Execute /nova-partida novamente.', ephemeral: true })
+        await btn.reply({ content: '❌ Sessão expirada. Execute /nova-partida novamente.', flags: MessageFlags.Ephemeral })
         return
       }
 
@@ -357,7 +358,7 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
     if (btn.customId === 'btn_finish_match') {
       const currentSession = sessions.get(sessionKey)
       if (!currentSession || currentSession.players.length === 0) {
-        await btn.reply({ content: '❌ Adicione pelo menos um jogador antes de finalizar.', ephemeral: true })
+        await btn.reply({ content: '❌ Adicione pelo menos um jogador antes de finalizar.', flags: MessageFlags.Ephemeral })
         return
       }
 

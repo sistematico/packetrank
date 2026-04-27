@@ -19,7 +19,7 @@ Bot Discord para o site [packetloss.com.br](https://packetloss.com.br) — exibe
 ```
 packetrank/
 ├── src/
-│   ├── index.ts               # Entry point: inicializa o client e registra os comandos
+│   ├── bot.ts               # Entry point: inicializa o client e registra os comandos
 │   ├── api/
 │   │   ├── client.ts          # Funções de fetch para a API do packetloss + mockup
 │   │   └── types.ts           # Tipagens TypeScript compartilhadas
@@ -358,7 +358,7 @@ Authorization: Bearer <API_TOKEN>
 ## Adicionando novos comandos
 
 1. Crie `src/commands/meu-comando.ts` exportando `data` (SlashCommandBuilder) e `execute`
-2. Importe e adicione no array de comandos em `src/index.ts`
+2. Importe e adicione no array de comandos em `src/bot.ts`
 3. Na próxima inicialização, o comando é registrado automaticamente
 
 ---

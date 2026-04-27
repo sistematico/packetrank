@@ -4,6 +4,7 @@ import {
   Collection,
   Events,
   GatewayIntentBits,
+  MessageFlags,
   REST,
   Routes,
   type ChatInputCommandInteraction,
@@ -75,11 +76,11 @@ client.on(Events.InteractionCreate, async interaction => {
     await cmd.execute(interaction)
   } catch (err) {
     console.error(`[interaction] Erro em /${interaction.commandName}:`, err)
-    const msg = { content: '⚠️ Ocorreu um erro ao executar este comando.', ephemeral: true }
+    const content = '⚠️ Ocorreu um erro ao executar este comando.'
     if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(msg)
+      await interaction.followUp({ content, flags: MessageFlags.Ephemeral })
     } else {
-      await interaction.reply(msg)
+      await interaction.reply({ content, flags: MessageFlags.Ephemeral })
     }
   }
 })

@@ -26,7 +26,7 @@ Instruções e contexto para o agente de IA sobre este projeto.
 
 ```
 src/
-├── index.ts              # Client Discord.js, registro de comandos no startup
+├── bot.ts              # Client Discord.js, registro de comandos no startup
 ├── api/
 │   ├── client.ts         # Fetch das rotas do packetloss + fallback para mockup
 │   └── types.ts          # Interfaces TypeScript: Match, PlayerRank, etc.

@@ -23,7 +23,7 @@ function buildMatchEmbed(match: Match): EmbedBuilder {
   const inicio = new Date(match.startedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
   const fim = new Date(match.endedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-  const rows = [...match.players]
+  const rows = [...(match.players ?? [])]
     .sort((a, b) => b.score - a.score)
     .map((mp, i) => {
       const kd = (mp.kills / Math.max(mp.deaths, 1)).toFixed(2)

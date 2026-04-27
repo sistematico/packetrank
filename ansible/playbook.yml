@@ -112,7 +112,7 @@
 
     - name: Check if app build exists
       ansible.builtin.stat:
-        path: "{{ app_dir }}/dist/index.js"
+        path: "{{ app_dir }}/dist/bot.js"
       register: app_build
 
     - name: Ensure packetrank service is started
@@ -125,7 +125,7 @@
     - name: Warn if app is not deployed yet
       ansible.builtin.debug:
         msg: >-
-          Serviço não iniciado: {{ app_dir }}/dist/index.js não encontrado.
+          Serviço não iniciado: {{ app_dir }}/dist/bot.js não encontrado.
           Execute o deploy (git pull + pnpm build) e então: systemctl start {{ app_name }}
       when: not app_build.stat.exists
 
