@@ -13,6 +13,7 @@ import {
 import * as partida from './commands/partida.js'
 import * as rank from './commands/rank.js'
 import * as ranking from './commands/ranking.js'
+import * as novaPartida from './commands/nova-partida.js'
 
 // ---------------------------------------------------------------------------
 // Validação de variáveis de ambiente
@@ -34,7 +35,7 @@ type Command = {
 
 const commands = new Collection<string, Command>()
 
-for (const cmd of [partida, rank, ranking] as Command[]) {
+for (const cmd of [partida, rank, ranking, novaPartida] as Command[]) {
   commands.set(cmd.data.name, cmd)
 }
 

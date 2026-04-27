@@ -53,6 +53,12 @@ API_BASE_URL=https://packetloss.com.br
 
 # "true" para usar dados de mockup mesmo com API_BASE_URL definida
 USE_MOCK_API=false
+
+# Token de autenticação enviado no header Authorization: Bearer <token>
+API_TOKEN=
+
+# ID do cargo Discord que pode usar /nova-partida (além do owner)
+ALLOWED_ROLE_ID=
 ```
 
 > **Dica de desenvolvimento:** defina `DISCORD_GUILD_ID` com o ID do seu servidor de testes para que os slash commands apareçam instantaneamente, sem a espera de até 1 hora do registro global.
@@ -128,22 +134,94 @@ Exibe o ranking geral de jogadores.
 
 ---
 
-## Integração com a API do packetloss
+### `/nova-partida` *(requer permissão)*
+
+Registra uma nova partida de Among Us. Abre um fluxo interativo via botões e modais.
+
+**Quem pode usar:** owner do servidor ou membros com o cargo definido em `ALLOWED_ROLE_ID`.
+
+**Fluxo:**
+1. O bot exibe a tabela de pontuação e um botão **▶ Iniciar registro**.
+2. Um modal solicita o mapa e a data/hora da partida (`DD/MM/AAAA HH:MM`).
+3. O botão **➕ Adicionar Jogador** abre um modal por jogador com:
+   - Discord ID ou menção, nome, papel (`impostor` / `tripulante`), kills e flags.
+   - Flags disponíveis (separadas por vírgula): `won`, `died`, `sabotage`, `lostsabotage`, `ejected`, `kited`, `punished`.
+   - Um segundo modal pergunta os votos corretos e errados do jogador.
+4. O botão **✅ Finalizar** envia os dados à API e exibe o resumo com scores calculados.
+
+---
 
 O bot consome as seguintes rotas HTTP da aplicação Next.js:
 
-| Método | Rota                     | Descrição                                      |
-|--------|--------------------------|------------------------------------------------|
-| GET    | `/api/matches`           | Lista todas as partidas                        |
-| GET    | `/api/matches/last`      | Retorna a última partida                       |
-| GET    | `/api/matches/:id`       | Retorna uma partida específica por ID          |
-| GET    | `/api/rank/:discordId`   | Rank individual pelo Discord ID do jogador     |
-| GET    | `/api/ranking/last`      | Ranking da última partida                      |
-| GET    | `/api/ranking/overall`   | Ranking geral acumulado                        |
+| Método | Rota                     | Corpo (JSON)           | Descrição                                                           |
+|--------|--------------------------|------------------------|---------------------------------------------------------------------|
+| GET    | `/api/matches`           | —                      | Lista todas as partidas registradas                                 |
+| GET    | `/api/matches/last`      | —                      | Retorna a última partida registrada                                 |
+| GET    | `/api/matches/:id`       | —                      | Retorna uma partida específica pelo ID                              |
+| **POST** | **`/api/matches`**     | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações    |
+| GET    | `/api/rank/:discordId`   | —                      | Rank individual pelo Discord ID do jogador                          |
+| GET    | `/api/ranking/last`      | —                      | Ranking da última partida registrada                                |
+| GET    | `/api/ranking/overall`   | —                      | Ranking geral acumulado de todas as partidas                        |
 
 > As rotas ainda estão em desenvolvimento no site. Enquanto não existem, o bot usa **dados de mockup** automáticos (ative com `USE_MOCK_API=true` ou simplesmente não defina `API_BASE_URL`).
 
-### Formato esperado das respostas
+### `POST /api/matches` — Corpo da requisição (`SubmitMatch`)
+
+```ts
+{
+  map: string          // Nome do mapa (ex: "Polus")
+  playedAt: string     // ISO 8601 (ex: "2026-04-27T20:30:00.000Z")
+  players: Array<{
+    discordId: string          // Discord ID do jogador
+    name: string               // Nome de exibição
+    role: 'impostor' | 'tripulante'
+    kills: number              // Nº de kills (impostores)
+    died: boolean              // O jogador morreu na partida
+    won: boolean               // O time do jogador venceu
+    wonBySabotage: boolean     // Impostor venceu por sabotagem (+2 bônus)
+    lostBySabotage: boolean    // Tripulante perdeu por sabotagem (-5)
+    ejectedCrewmate: boolean   // Botão ejetou tripulante (+1)
+    kited: boolean             // Kitar ou cair (-5)
+    punished: boolean          // Punição administrativa (-10)
+    correctVotes: number       // Votos corretos em reuniões (+3 cada)
+    wrongVotes: number         // Votos errados em reuniões (-4 cada)
+  }>
+}
+```
+
+**Resposta (`SubmitMatchResponse`):**
+```ts
+{
+  id: string
+  map: string
+  playedAt: string
+  players: Array<{ /* todos os campos acima */ score: number }>
+}
+```
+
+**Cabeçalho de autenticação** (quando `API_TOKEN` estiver definido):
+```
+Authorization: Bearer <API_TOKEN>
+```
+
+### Tabela de pontuação (Among Us)
+
+| Evento                                  | Pontos  |
+|-----------------------------------------|---------|
+| Vitória Impostor                        | +12 pts |
+| Kill (Impostor)                         | +3 pts  |
+| Vitória Tripulante Morto                | +5 pts  |
+| Vitória Tripulante Vivo                 | +8 pts  |
+| Vitória por Sabotagem (bônus Impostor)  | +2 pts  |
+| Botão de Impostor ejetou Tripulante     | +1 pts  |
+| Morreu (Tripulante)                     | +1 pts  |
+| Voto Correto                            | +3 pts  |
+| Derrota por Sabotagem (Tripulante)      | −5 pts  |
+| Kitar ou Cair                           | −5 pts  |
+| Voto Errado                             | −4 pts  |
+| Punição administrativa                  | −10 pts |
+
+### Formato das demais respostas
 
 #### `GET /api/matches/last` → `Match`
 

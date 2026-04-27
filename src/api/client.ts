@@ -1,4 +1,4 @@
-import type { Match, PlayerRank, LastMatchRanking, OverallRanking } from './types.js'
+import type { Match, PlayerRank, LastMatchRanking, OverallRanking, SubmitMatch, SubmitMatchResponse } from './types.js'
 
 // ---------------------------------------------------------------------------
 // Mockup data — substitua pelas rotas reais do packetloss quando disponíveis
@@ -60,6 +60,21 @@ async function apiFetch<T>(path: string): Promise<T> {
   const res = await fetch(url, {
     headers: { 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(8000),
+  })
+  if (!res.ok) throw new Error(`API error ${res.status} — ${url}`)
+  return res.json() as Promise<T>
+}
+
+async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  const url = buildApiUrl(path)
+  const apiToken = process.env.API_TOKEN
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (apiToken) headers['Authorization'] = `Bearer ${apiToken}`
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10000),
   })
   if (!res.ok) throw new Error(`API error ${res.status} — ${url}`)
   return res.json() as Promise<T>
@@ -140,4 +155,8 @@ export async function getOverallRanking(): Promise<OverallRanking | null> {
     return { entries, totalMatches: MOCK_MATCHES.length, updatedAt: new Date().toISOString() }
   }
   return apiFetch<OverallRanking>('/api/ranking/overall')
+}
+
+export async function submitMatch(payload: SubmitMatch): Promise<SubmitMatchResponse> {
+  return apiPost<SubmitMatchResponse>('/api/matches', payload)
 }

@@ -62,3 +62,49 @@ export interface OverallRanking {
   totalMatches: number
   updatedAt: string
 }
+
+// ---------------------------------------------------------------------------
+// Submissão de partida (Among Us)
+// ---------------------------------------------------------------------------
+
+export type PlayerRole = 'impostor' | 'tripulante'
+
+export interface SubmitMatchPlayer {
+  discordId: string
+  name: string
+  role: PlayerRole
+  /** Número de kills (impostores) */
+  kills: number
+  /** O jogador morreu durante a partida */
+  died: boolean
+  /** O time do jogador venceu */
+  won: boolean
+  /** Impostor venceu por sabotagem (+2 bônus) */
+  wonBySabotage: boolean
+  /** Tripulante perdeu por sabotagem (-5) */
+  lostBySabotage: boolean
+  /** Botão de impostor que ejetou tripulante (+1) */
+  ejectedCrewmate: boolean
+  /** Kitar ou cair (-5) */
+  kited: boolean
+  /** Punição administrativa (-10) */
+  punished: boolean
+  /** Votos corretos na reunião (+3 cada) */
+  correctVotes: number
+  /** Votos errados na reunião (-4 cada) */
+  wrongVotes: number
+}
+
+export interface SubmitMatch {
+  map: string
+  /** ISO 8601 */
+  playedAt: string
+  players: SubmitMatchPlayer[]
+}
+
+export interface SubmitMatchResponse {
+  id: string
+  map: string
+  playedAt: string
+  players: (SubmitMatchPlayer & { score: number })[]
+}
