@@ -28,37 +28,12 @@
 
   vars:
     app_name: packetrank
-    app_dir: /opt/packetrank/packetrank
-    app_user: packetrank
-    app_group: packetrank
-    deploy_user: nginx                  # usuário que faz o deploy (git pull, pnpm build)
+    app_dir: /opt/packetrank
+    app_user: nginx
+    app_group: nginx
     service_src: "{{ playbook_dir }}/../files/packetrank.service"
 
   tasks:
-
-    # ── 1. Usuário e grupo de sistema ─────────────────────────────────────────
-
-    - name: Create packetrank system group
-      ansible.builtin.group:
-        name: "{{ app_group }}"
-        system: true
-        state: present
-
-    - name: Create packetrank system user
-      ansible.builtin.user:
-        name: "{{ app_user }}"
-        group: "{{ app_group }}"
-        system: true
-        shell: /sbin/nologin
-        home: "{{ app_dir }}"
-        create_home: false
-        state: present
-
-    - name: Add deploy user to packetrank group
-      ansible.builtin.user:
-        name: "{{ deploy_user }}"
-        groups: "{{ app_group }}"
-        append: true
 
     # ── 2. Diretório da aplicação ─────────────────────────────────────────────
     #
@@ -70,23 +45,23 @@
       ansible.builtin.file:
         path: "{{ app_dir }}"
         state: directory
-        owner: "{{ deploy_user }}"
+        owner: "{{ app_user }}"
         group: "{{ app_group }}"
         mode: "2775"
 
     # ── 3. Sudoers: nginx pode gerenciar o serviço ────────────────────────────
 
-    - name: Allow {{ deploy_user }} to manage packetrank service via systemctl
+    - name: Allow {{ app_user }} to manage packetrank service via systemctl
       ansible.builtin.copy:
-        dest: /etc/sudoers.d/{{ deploy_user }}-{{ app_name }}
+        dest: /etc/sudoers.d/{{ app_user }}-{{ app_name }}
         content: |
           # Gerado pelo Ansible — não edite manualmente
-          # Permite que {{ deploy_user }} gerencie apenas o serviço packetrank
-          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl start {{ app_name }}.service
-          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl stop {{ app_name }}.service
-          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl restart {{ app_name }}.service
-          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl status {{ app_name }}.service
-          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
+          # Permite que {{ app_user }} gerencie apenas o serviço packetrank
+          {{ app_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl start {{ app_name }}.service
+          {{ app_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl stop {{ app_name }}.service
+          {{ app_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl restart {{ app_name }}.service
+          {{ app_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl status {{ app_name }}.service
+          {{ app_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
         owner: root
         group: root
         mode: "0440"
@@ -170,3 +145,4 @@
       ansible.builtin.systemd:
         name: "{{ app_name }}"
         state: restarted
+      ignore_errors: true

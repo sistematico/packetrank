@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=packetrank
-WorkingDirectory=/opt/packetrank
+User=nginx
+WorkingDirectory=/opt/packetrank/packetrank
 ExecStart=/usr/local/bin/node dist/index.js
 Restart=on-failure
 RestartSec=10
@@ -15,13 +15,13 @@ StandardError=journal
 SyslogIdentifier=packetrank
 
 # Variáveis de ambiente — ajuste conforme necessário
-EnvironmentFile=/opt/packetrank/.env
+EnvironmentFile=/opt/packetrank/packetrank/.env
 
 # Hardening básico
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/opt/packetrank
+ReadWritePaths=/opt/packetrank/packetrank
 
 [Install]
 WantedBy=multi-user.target
