@@ -1,9 +1,9 @@
 {
   "name": "packetrank",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "sistematico",
   "description": "Bot Discord para o site packetloss.com.br — exibe partidas, ranks e rankings",
-  "keywords": [],
+  "keywords": ["discordjs", "bot", "discord", "javascript", "typescript"],
   "license": "ISC",
   "main": "dist/bot.js",
   "type": "module",
@@ -19,8 +19,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
-    "typescript": "^5.8.0"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.33.2",
   "pnpm": {
