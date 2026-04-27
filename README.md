@@ -59,6 +59,9 @@ API_TOKEN=
 
 # ID do cargo Discord que pode usar /nova-partida (além do owner)
 ALLOWED_ROLE_ID=
+
+# IDs de usuários Discord que podem usar /nova-partida (separados por vírgula)
+ALLOWED_USER_IDS=
 ```
 
 > **Dica de desenvolvimento:** defina `DISCORD_GUILD_ID` com o ID do seu servidor de testes para que os slash commands apareçam instantaneamente, sem a espera de até 1 hora do registro global.
@@ -170,30 +173,32 @@ Exibe o ranking geral de jogadores.
 
 Registra uma nova partida de Among Us. Abre um fluxo interativo via botões e modais.
 
-**Quem pode usar:** owner do servidor ou membros com o cargo definido em `ALLOWED_ROLE_ID`.
+**Quem pode usar:** owner do servidor ou membros com o cargo definido em `ALLOWED_ROLE_ID` / `ALLOWED_USER_IDS`.
 
 **Fluxo:**
 1. O bot exibe a tabela de pontuação e um botão **▶ Iniciar registro**.
 2. Um modal solicita o mapa e a data/hora da partida (`DD/MM/AAAA HH:MM`).
-3. O botão **➕ Adicionar Jogador** abre um modal por jogador com:
-   - Discord ID ou menção, nome, papel (`impostor` / `tripulante`), kills e flags.
-   - Flags disponíveis (separadas por vírgula): `won`, `died`, `sabotage`, `lostsabotage`, `ejected`, `kited`, `punished`.
-   - Um segundo modal pergunta os votos corretos e errados do jogador.
-4. O botão **✅ Finalizar** envia os dados à API e exibe o resumo com scores calculados.
+   - **Valores padrão:** mapa `The Skeld` e data de hoje às `22:00` (fuso horário de São Paulo).
+3. O botão **➕ Adicionar Jogador** abre um modal por jogador. O conteúdo do modal varia conforme a data preenchida:
+   - **Partida futura** (data/hora ainda não chegou): exibe apenas Discord ID e nome — os campos de papel, kills e flags são suprimidos. O jogador é registrado como **pré-inscrito** na sessão.
+   - **Partida passada** (data/hora já passou): exibe todos os campos — papel (`impostor` / `tripulante`), kills/votos e flags (`won`, `died`, `sabotage`, `lostsabotage`, `ejected`, `kited`, `punished`).
+4. O botão **✅ Finalizar** envia os dados à API e exibe:
+   - Partida futura: lista de pré-inscritos sem scores.
+   - Partida passada: ranking com scores calculados (🥇🥈🥉).
 
 ---
 
 O bot consome as seguintes rotas HTTP da aplicação Next.js:
 
-| Método   | Rota                        | Query params                  | Corpo (JSON)            | Descrição                                                        |
-|----------|-----------------------------|-------------------------------|-------------------------|------------------------------------------------------------------|
-| GET      | `/api/bot/partidas`         | —                             | —                       | Lista todas as partidas registradas                              |
-| GET      | `/api/bot/partida`          | `id` *(opcional)*             | —                       | Retorna a última partida ou uma específica pelo ID               |
-| **POST** | **`/api/bot/partida`**      | —                             | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações  |
-| GET      | `/api/bot/rank`             | `player` *(Discord ID)*       | —                       | Rank individual de um jogador pelo Discord ID                    |
-| GET      | `/api/bot/rankings`         | `tipo` (`ultima` \| `geral`)  | —                       | Ranking da última partida (`ultima`) ou acumulado (`geral`)      |
+| Método   | Rota                        | Query params                  | Corpo (JSON)               | Descrição                                                        |
+|----------|-----------------------------|-------------------------------|----------------------------|------------------------------------------------------------------|
+| GET      | `/api/bot/partidas`         | —                             | —                          | Lista todas as datas de campeonato registradas                   |
+| GET      | `/api/bot/partida`          | —                             | —                          | Retorna a próxima sessão agendada                                |
+| **POST** | **`/api/bot/partida`**      | —                             | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações     |
+| GET      | `/api/bot/rank`             | `player` *(nick)*             | —                          | Rank individual de um jogador pelo nick                          |
+| GET      | `/api/bot/rankings`         | `tipo` (`ultima` \| `geral`)  | —                          | Ranking da última partida (`ultima`) ou acumulado (`geral`)      |
 
-> As rotas ainda estão em desenvolvimento no site. Enquanto não existem, o bot usa **dados de mockup** automáticos (ative com `USE_MOCK_API=true` ou simplesmente não defina `API_BASE_URL`).
+> Para usar o `POST /api/bot/partida` em produção, defina `API_BASE_URL` e `API_TOKEN` no `.env`. Em desenvolvimento, use `USE_MOCK_API=true` para simular a resposta localmente sem precisar do site.
 
 ### `GET /api/bot/partidas` → `Match[]`
 

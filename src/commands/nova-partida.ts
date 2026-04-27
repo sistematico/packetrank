@@ -95,6 +95,24 @@ const sessions = new Map<string, MatchSession>()
 // ---------------------------------------------------------------------------
 // Helpers de modal
 // ---------------------------------------------------------------------------
+function todayBR(): string {
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).formatToParts(now)
+  const d = parts.find(p => p.type === 'day')!.value
+  const m = parts.find(p => p.type === 'month')!.value
+  const y = parts.find(p => p.type === 'year')!.value
+  return `${d}/${m}/${y} 22:00`
+}
+
+function isFutureMatch(playedAt: string): boolean {
+  return new Date(playedAt) > new Date()
+}
+
 function buildMatchInfoModal(): ModalBuilder {
   return new ModalBuilder()
     .setCustomId('modal_match_info')
@@ -105,7 +123,7 @@ function buildMatchInfoModal(): ModalBuilder {
           .setCustomId('map')
           .setLabel('Mapa')
           .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Ex: Polus, The Skeld, Airship...')
+          .setValue('The Skeld')
           .setRequired(true)
           .setMaxLength(50),
       ),
@@ -114,17 +132,17 @@ function buildMatchInfoModal(): ModalBuilder {
           .setCustomId('playedAt')
           .setLabel('Data e hora (DD/MM/AAAA HH:MM)')
           .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Ex: 27/04/2026 20:30')
+          .setValue(todayBR())
           .setRequired(true)
           .setMaxLength(16),
       ),
     )
 }
 
-function buildPlayerModal(index: number): ModalBuilder {
-  return new ModalBuilder()
+function buildPlayerModal(index: number, future: boolean): ModalBuilder {
+  const modal = new ModalBuilder()
     .setCustomId(`modal_player_${index}`)
-    .setTitle(`Jogador ${index + 1}`)
+    .setTitle(future ? `Jogador ${index + 1} — pré-registro` : `Jogador ${index + 1}`)
     .addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
@@ -143,6 +161,10 @@ function buildPlayerModal(index: number): ModalBuilder {
           .setRequired(true)
           .setMaxLength(40),
       ),
+    )
+
+  if (!future) {
+    modal.addComponents(
       new ActionRowBuilder<TextInputBuilder>().addComponents(
         new TextInputBuilder()
           .setCustomId('role')
@@ -171,6 +193,9 @@ function buildPlayerModal(index: number): ModalBuilder {
           .setMaxLength(200),
       ),
     )
+  }
+
+  return modal
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +221,29 @@ function calcScore(p: SubmitMatchPlayer): number {
 // ---------------------------------------------------------------------------
 // Parsear flags do campo livre
 // ---------------------------------------------------------------------------
-function parsePlayer(fields: Record<string, string>, _index: number): SubmitMatchPlayer {
+function parsePlayer(fields: Record<string, string>, future: boolean): SubmitMatchPlayer {
+  const base = {
+    discordId: fields.discordId.replace(/[<@!>]/g, '').trim(),
+    name: fields.name.trim(),
+  }
+
+  if (future) {
+    return {
+      ...base,
+      role: 'tripulante' as PlayerRole,
+      kills: 0,
+      died: false,
+      won: false,
+      wonBySabotage: false,
+      lostBySabotage: false,
+      ejectedCrewmate: false,
+      kited: false,
+      punished: false,
+      correctVotes: 0,
+      wrongVotes: 0,
+    }
+  }
+
   const rawFlags = (fields.flags ?? '').toLowerCase()
   const flags = rawFlags.split(',').map(f => f.trim())
   const role = fields.role.trim().toLowerCase() === 'impostor' ? 'impostor' : 'tripulante' as PlayerRole
@@ -208,8 +255,7 @@ function parsePlayer(fields: Record<string, string>, _index: number): SubmitMatc
   const wrongVotes = parseInt(kvParts[2] ?? '0', 10) || 0
 
   return {
-    discordId: fields.discordId.replace(/[<@!>]/g, '').trim(),
-    name: fields.name.trim(),
+    ...base,
     role,
     kills,
     died: flags.includes('died'),
@@ -240,17 +286,19 @@ function parseBrDate(raw: string): string {
 // ---------------------------------------------------------------------------
 function buildSummaryEmbed(session: MatchSession): EmbedBuilder {
   const playedAt = new Date(session.playedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+  const future = isFutureMatch(session.playedAt)
   const rows = session.players.map((p, i) => {
+    if (future) return `${i + 1}. **${p.name}** — pré-registrado`
     const score = calcScore(p)
     return `${i + 1}. **${p.name}** (${p.role}) — Score: \`${score}\``
   }).join('\n')
 
   return new EmbedBuilder()
-    .setColor(Colors.Orange)
-    .setTitle(`📋 Resumo da Partida — ${session.map}`)
+    .setColor(future ? Colors.Yellow : Colors.Orange)
+    .setTitle(`📋 ${future ? 'Pré-registro' : 'Resumo'} — ${session.map}`)
     .setDescription(rows || 'Nenhum jogador adicionado ainda.')
     .addFields({ name: '📅 Data', value: playedAt, inline: true })
-    .setFooter({ text: 'Revise e clique em Finalizar para enviar.' })
+    .setFooter({ text: future ? '⏳ Partida futura — scores serão preenchidos depois.' : 'Revise e clique em Finalizar para enviar.' })
 }
 
 // ---------------------------------------------------------------------------
@@ -329,8 +377,9 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
         return
       }
 
+      const future = isFutureMatch(currentSession.playedAt)
       const playerIndex = currentSession.players.length
-      await btn.showModal(buildPlayerModal(playerIndex))
+      await btn.showModal(buildPlayerModal(playerIndex, future))
 
       const playerSubmit = await btn.awaitModalSubmit({
         time: 10 * 60 * 1000,
@@ -339,13 +388,17 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 
       if (!playerSubmit) return
 
-      const player = parsePlayer({
+      const fields: Record<string, string> = {
         discordId: playerSubmit.fields.getTextInputValue('discordId'),
         name: playerSubmit.fields.getTextInputValue('name'),
-        role: playerSubmit.fields.getTextInputValue('role'),
-        kills_votes: playerSubmit.fields.getTextInputValue('kills_votes'),
-        flags: playerSubmit.fields.getTextInputValue('flags'),
-      }, playerIndex)
+      }
+      if (!future) {
+        fields.role = playerSubmit.fields.getTextInputValue('role')
+        fields.kills_votes = playerSubmit.fields.getTextInputValue('kills_votes')
+        fields.flags = playerSubmit.fields.getTextInputValue('flags')
+      }
+
+      const player = parsePlayer(fields, future)
 
       currentSession.players.push(player)
       sessions.set(sessionKey, currentSession)
@@ -414,18 +467,22 @@ export async function execute(interaction: ChatInputCommandInteraction): Promise
 // ---------------------------------------------------------------------------
 function buildDoneEmbed(result: { id: string; map: string; playedAt: string; players: (SubmitMatchPlayer & { score: number })[] }): EmbedBuilder {
   const playedAt = new Date(result.playedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
-  const rows = [...result.players]
-    .sort((a, b) => b.score - a.score)
-    .map((p, i) => {
-      const medals = ['🥇', '🥈', '🥉']
-      const pos = medals[i] ?? `${i + 1}.`
-      return `${pos} **${p.name}** (${p.role}) — \`${p.score} pts\``
-    })
-    .join('\n')
+  const future = isFutureMatch(result.playedAt)
+
+  const rows = future
+    ? result.players.map((p, i) => `${i + 1}. **${p.name}** — pré-registrado`).join('\n')
+    : [...result.players]
+        .sort((a, b) => b.score - a.score)
+        .map((p, i) => {
+          const medals = ['🥇', '🥈', '🥉']
+          const pos = medals[i] ?? `${i + 1}.`
+          return `${pos} **${p.name}** (${p.role}) — \`${p.score} pts\``
+        })
+        .join('\n')
 
   return new EmbedBuilder()
     .setColor(Colors.Green)
-    .setTitle(`✅ Partida registrada! — ${result.map}`)
+    .setTitle(future ? `📅 Pré-registro salvo! — ${result.map}` : `✅ Partida registrada! — ${result.map}`)
     .setDescription(rows)
     .addFields({ name: '📅 Data', value: playedAt, inline: true }, { name: '🆔 ID', value: result.id, inline: true })
     .setFooter({ text: 'packetloss.com.br' })
