@@ -249,6 +249,60 @@ O bot consome as seguintes rotas HTTP da aplicação Next.js:
 
 ---
 
+## Deploy em produção (Ansible)
+
+O diretório `ansible/` contém um playbook que provisiona o bot em qualquer servidor Linux (testado no **Oracle Linux 9 ARM64**).
+
+### O que o playbook faz
+
+1. Cria o usuário/grupo de sistema `packetrank`
+2. Adiciona o usuário de deploy (`nginx`) ao grupo `packetrank`
+3. Cria `/opt/packetrank` com `owner=nginx group=packetrank mode=2775`
+   - `nginx` é dono: `tar`/`scp` podem alterar metadados do diretório (`utime`/`chmod`) sem erro
+   - `packetrank` (serviço) acessa os arquivos via grupo
+   - setgid (`2xxx`): novos arquivos herdam o grupo automaticamente
+4. Cria regra de sudoers para que `nginx` possa gerenciar o serviço via `systemctl` sem senha
+5. Ajusta o contexto SELinux de `httpd_sys_content_t` para **`var_t`**, que é acessível pelo domínio `unconfined_service_t` (padrão de serviços customizados no RHEL/OL 9) — o domínio já possui `execmem` implicitamente, sem necessidade de boolean adicional
+6. Instala/atualiza a unit systemd e reinicia o serviço (se o build já existir)
+
+### Pré-requisitos
+
+```bash
+pip install ansible
+ansible-galaxy collection install ansible.posix community.general
+```
+
+### Uso
+
+```bash
+# 1. Copie e ajuste o inventory com o IP/host da VPS
+cp ansible/inventory.ini.example ansible/inventory.ini
+
+# 2. Execute o playbook (requer acesso root via SSH ou sudo)
+ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
+```
+
+### Estrutura
+
+```
+ansible/
+├── inventory.ini.example   # Modelo de inventory — copie para inventory.ini
+└── playbook.yml            # Playbook principal
+```
+
+### Notas sobre SELinux
+
+O script de deploy original usava `httpd_sys_content_t` para o diretório `/opt/packetrank`. Esse contexto é destinado a conteúdo servido pelo Apache/nginx e **não** concede permissão de execução a serviços customizados — o Node.js ficava bloqueado silenciosamente.
+
+A correção é usar `var_t`:
+
+| Contexto              | Acessível por               | Adequado para              |
+|-----------------------|-----------------------------|----------------------------|
+| `httpd_sys_content_t` | `httpd_t` (Apache)          | Arquivos estáticos web     |
+| `var_t`               | `unconfined_service_t`      | Serviços systemd customizados |
+
+---
+
 ## Links
 
 - Site: [packetloss.com.br](https://packetloss.com.br)
