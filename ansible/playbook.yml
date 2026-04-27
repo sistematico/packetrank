@@ -4,7 +4,7 @@
 # O que este playbook faz:
 #   1. Cria o usuário/grupo de sistema 'packetrank'
 #   2. Adiciona nginx ao grupo packetrank
-#   3. Cria /opt/packetrank com owner=nginx group=packetrank mode=2775
+#   3. Cria /opt/packetrank/packetrank com owner=nginx group=packetrank mode=2775
 #      → nginx é dono: tar/scp podem alterar metadados do diretório (utime/chmod)
 #      → packetrank acessa via grupo (leitura + execução dos arquivos do build)
 #      → setgid (2xxx): novos arquivos herdam o grupo packetrank automaticamente
@@ -28,7 +28,7 @@
 
   vars:
     app_name: packetrank
-    app_dir: /opt/packetrank
+    app_dir: /opt/packetrank/packetrank
     app_user: nginx
     app_group: nginx
     service_src: "{{ playbook_dir }}/../files/packetrank.service"

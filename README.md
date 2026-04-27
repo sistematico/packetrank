@@ -387,7 +387,7 @@ O diretório `ansible/` contém um playbook que provisiona o bot em qualquer ser
 
 1. Cria o usuário/grupo de sistema `packetrank`
 2. Adiciona o usuário de deploy (`nginx`) ao grupo `packetrank`
-3. Cria `/opt/packetrank` com `owner=nginx group=packetrank mode=2775`
+3. Cria `/opt/packetrank/packetrank` com `owner=nginx group=packetrank mode=2775`
    - `nginx` é dono: `tar`/`scp` podem alterar metadados do diretório (`utime`/`chmod`) sem erro
    - `packetrank` (serviço) acessa os arquivos via grupo
    - setgid (`2xxx`): novos arquivos herdam o grupo automaticamente
@@ -422,7 +422,7 @@ ansible/
 
 ### Notas sobre SELinux
 
-O script de deploy original usava `httpd_sys_content_t` para o diretório `/opt/packetrank`. Esse contexto é destinado a conteúdo servido pelo Apache/nginx e **não** concede permissão de execução a serviços customizados — o Node.js ficava bloqueado silenciosamente.
+O script de deploy original usava `httpd_sys_content_t` para o diretório `/opt/packetrank/packetrank`. Esse contexto é destinado a conteúdo servido pelo Apache/nginx e **não** concede permissão de execução a serviços customizados — o Node.js ficava bloqueado silenciosamente.
 
 A correção é usar `var_t`:
 

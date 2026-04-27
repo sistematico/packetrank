@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=nginx
-WorkingDirectory=/opt/packetrank
+WorkingDirectory=/opt/packetrank/packetrank
 ExecStart=/home/nginx/.local/share/pnpm/pnpm run start
 Restart=on-failure
 RestartSec=10
@@ -16,13 +16,13 @@ SyslogIdentifier=packetrank
 
 # Variáveis de ambiente — ajuste conforme necessário
 #EnvironmentFile=/opt/packetrank/.env
-EnvironmentFile=-/opt/packetrank/.env
+EnvironmentFile=-/opt/packetrank/packetrank/.env
 
 # Hardening básico
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
-ReadWritePaths=/opt/packetrank
+ReadWritePaths=/opt/packetrank/packetrank
 
 [Install]
 WantedBy=multi-user.target

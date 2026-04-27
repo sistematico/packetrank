@@ -9,7 +9,7 @@ PATH=$PATH:/home/nginx/.local/share/pnpm
 echo "📦 Preparando ambiente de deploy..."
 
 [ -e $TMPDIR ] && rm -rf $TMPDIR
-[ -e $WORKDIR ] && cp -af $WORKDIR $TMPDIR
+[ -e $WORKDIR ] && cp -af $WORKDIR/$NAME $TMPDIR
 cd $TMPDIR || exit 1
 
 #git clean -fxd -e .env -e drizzle/local.db
@@ -26,14 +26,14 @@ pnpm install
 if pnpm run build; then
   echo "✅ Build concluído com sucesso!"
   sudo /usr/bin/systemctl stop $SERVICE
-  [ -e $WORKDIR ] && rm -rf $WORKDIR
-  [ -e $TMPDIR ] && cp -af $TMPDIR $WORKDIR
-  chmod 640 $WORKDIR/.env
+  [ -e $WORKDIR/$NAME ] && rm -rf $WORKDIR/$NAME
+  [ -e $TMPDIR ] && cp -af $TMPDIR $WORKDIR/$NAME
+  chmod 640 $WORKDIR/$NAME/.env
 
-  echo "✅ Configurando contexto SELinux para $WORKDIR..."
-  sudo /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "$WORKDIR(/.*)?" 2> /dev/null
-  sudo /usr/sbin/semanage fcontext -a -t etc_t "$WORKDIR(/.*)?" 2> /dev/null
-  sudo /usr/sbin/restorecon -Rv $WORKDIR 2> /dev/null
+  echo "✅ Configurando contexto SELinux para $WORKDIR/$NAME..."
+  sudo /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "$WORKDIR/$NAME(/.*)?" 2> /dev/null
+  sudo /usr/sbin/semanage fcontext -a -t etc_t "$WORKDIR/$NAME(/.*)?" 2> /dev/null
+  sudo /usr/sbin/restorecon -Rv $WORKDIR/$NAME 2> /dev/null
   sudo /usr/sbin/restorecon -Rv /home/nginx/.local/share/pnpm/ 2> /dev/null
  
   # ou force o tipo executável
