@@ -78,6 +78,22 @@ ALLOWED_ROLE_ID=
    ```
 
 > Se `ALLOWED_ROLE_ID` não for definido, apenas o owner do servidor poderá usar `/nova-partida`.
+>
+> Para múltiplos cargos, separe os IDs por vírgula: `ALLOWED_ROLE_ID=111111111,222222222`
+
+### Ativar o Server Members Intent
+
+O bot usa o **Server Members Intent** (intent privilegiado) para verificar os cargos dos membros. Sem ele, usuários com `ALLOWED_ROLE_ID` não conseguirão usar `/nova-partida`.
+
+**Passo a passo:**
+
+1. Acesse o [Discord Developer Portal](https://discord.com/developers/applications) e selecione sua aplicação.
+2. No menu lateral, clique em **Bot**.
+3. Role até a seção **Privileged Gateway Intents**.
+4. Ative **Server Members Intent**.
+5. Clique em **Save Changes**.
+
+> O owner do servidor **não** depende desse intent — ele sempre tem permissão independentemente da configuração.
 
 ---
 

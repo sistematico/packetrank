@@ -7,7 +7,7 @@
  * 3. Após o modal, o bot pede os jogadores um a um via novo modal por jogador.
  * 4. Botão "Finalizar" envia os dados para a API.
  *
- * Permissão: owner do servidor OU cargo definido em ALLOWED_ROLE_ID.
+ * Permissão: owner do servidor OU cargo definido em ALLOWED_ROLE_ID (múltiplos IDs separados por vírgula).
  */
 
 import {
@@ -58,21 +58,17 @@ Punição                       -10 pts
 // Guard de permissão
 // ---------------------------------------------------------------------------
 async function hasPermission(interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<boolean> {
-  const partialGuild = interaction.guild as Guild | null
-  if (!partialGuild) return false
-
-  // Garante que a guild está totalmente carregada (ownerId pode estar vazio em guilds parciais)
-  const guild = await partialGuild.fetch().catch(() => null)
+  const guild = interaction.guild as Guild | null
   if (!guild) return false
 
-  // Owner do servidor sempre pode
+  // Owner do servidor sempre pode (ownerId está disponível via intent Guilds)
   if (interaction.user.id === guild.ownerId) return true
 
-  const allowedRoleId = process.env.ALLOWED_ROLE_ID
-  if (!allowedRoleId) return false
+  const allowedRoleIds = (process.env.ALLOWED_ROLE_ID ?? '').split(',').map(id => id.trim()).filter(Boolean)
+  if (allowedRoleIds.length === 0) return false
 
   const member = await guild.members.fetch(interaction.user.id).catch(() => null)
-  return member?.roles.cache.has(allowedRoleId) ?? false
+  return member ? allowedRoleIds.some(id => member.roles.cache.has(id)) : false
 }
 
 // ---------------------------------------------------------------------------

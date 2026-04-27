@@ -59,7 +59,7 @@ async function registerCommands(): Promise<void> {
 // Client
 // ---------------------------------------------------------------------------
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] })
 
 client.once(Events.ClientReady, async c => {
   console.log(`[bot] Online como ${c.user.tag}`)
