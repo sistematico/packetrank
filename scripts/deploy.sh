@@ -19,15 +19,16 @@ cp .env .env.production
 echo "📥 Instalando dependências..."
 pnpm install
 
-echo "🗃️ Sincronizando banco de dados..."
-pnpm run push
-pnpm run seed
+#echo "🗃️ Sincronizando banco de dados..."
+#pnpm run push
+#pnpm run seed
 
 if pnpm run build; then
   echo "✅ Build concluído com sucesso!"
   sudo /usr/bin/systemctl stop $SERVICE
   [ -e $WORKDIR ] && rm -rf $WORKDIR
   [ -e $TMPDIR ] && cp -af $TMPDIR $WORKDIR
+  chmod 640 $WORKDIR/.env
 
   echo "✅ Configurando contexto SELinux para /opt/packetrank/packetrank..."
   sudo /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "/opt/packetrank/packetrank(/.*)?" 2> /dev/null
