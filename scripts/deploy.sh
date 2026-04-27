@@ -2,7 +2,7 @@
 
 NAME="packetrank"
 TMPDIR="/tmp/$NAME"
-WORKDIR="/opt/$NAME"
+WORKDIR="/opt/$NAME/$NAME"
 SERVICE="${NAME}.service"
 PATH=$PATH:/home/nginx/.local/share/pnpm
 
@@ -29,9 +29,9 @@ if pnpm run build; then
   [ -e $WORKDIR ] && rm -rf $WORKDIR
   [ -e $TMPDIR ] && cp -af $TMPDIR $WORKDIR
 
-  echo "✅ Configurando contexto SELinux para /opt/packetrank..."
-  sudo /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "/opt/packetrank(/.*)?" 2> /dev/null
-  sudo /usr/sbin/restorecon -R /opt/packetrank 2> /dev/null
+  echo "✅ Configurando contexto SELinux para /opt/packetrank/packetrank..."
+  sudo /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "/opt/packetrank/packetrank(/.*)?" 2> /dev/null
+  sudo /usr/sbin/restorecon -R /opt/packetrank/packetrank 2> /dev/null
   sudo /usr/sbin/restorecon -Rv /home/nginx/.local/share/pnpm/
  
   # ou force o tipo executável

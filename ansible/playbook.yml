@@ -28,7 +28,7 @@
 
   vars:
     app_name: packetrank
-    app_dir: /opt/packetrank
+    app_dir: /opt/packetrank/packetrank
     app_user: packetrank
     app_group: packetrank
     deploy_user: nginx                  # usuário que faz o deploy (git pull, pnpm build)
