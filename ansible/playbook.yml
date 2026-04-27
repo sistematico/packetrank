@@ -120,6 +120,7 @@
         name: "{{ app_name }}"
         state: started
       when: app_build.stat.exists
+      ignore_errors: true
 
     - name: Warn if app is not deployed yet
       ansible.builtin.debug:
