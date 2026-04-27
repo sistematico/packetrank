@@ -58,23 +58,27 @@ Punição                       -10 pts
 // Guard de permissão
 // ---------------------------------------------------------------------------
 async function hasPermission(interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<boolean> {
-  const partialGuild = interaction.guild as Guild | null
-  if (!partialGuild) return false
+  const userId = interaction.user.id
 
-  // guild.ownerId pode estar vazio em guilds parciais; fetch garante o valor correto
-  const ownerId = partialGuild.ownerId || (await partialGuild.fetch().catch(() => null))?.ownerId
-  console.log(`[hasPermission] user=${interaction.user.id} owner=${ownerId}`)
+  // Usuários explicitamente permitidos por ID (mais confiável que owner check)
+  const allowedUserIds = (process.env.ALLOWED_USER_IDS ?? '').split(',').map(id => id.trim()).filter(Boolean)
+  if (allowedUserIds.includes(userId)) return true
 
-  if (ownerId && interaction.user.id === ownerId) return true
+  // Owner do servidor
+  const guild = interaction.guild as Guild | null
+  if (guild) {
+    const ownerId = guild.ownerId || (await guild.fetch().catch(() => null))?.ownerId
+    if (ownerId && userId === ownerId) return true
+  }
 
+  // Cargos permitidos
   const allowedRoleIds = (process.env.ALLOWED_ROLE_ID ?? '').split(',').map(id => id.trim()).filter(Boolean)
-  if (allowedRoleIds.length === 0) return false
+  if (allowedRoleIds.length > 0 && guild) {
+    const member = await guild.members.fetch(userId).catch(() => null)
+    if (member && allowedRoleIds.some(id => member.roles.cache.has(id))) return true
+  }
 
-  const guild = partialGuild.members ? partialGuild : await partialGuild.fetch().catch(() => null)
-  if (!guild) return false
-
-  const member = await guild.members.fetch(interaction.user.id).catch(() => null)
-  return member ? allowedRoleIds.some(id => member.roles.cache.has(id)) : false
+  return false
 }
 
 // ---------------------------------------------------------------------------
