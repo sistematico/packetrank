@@ -26,7 +26,7 @@ function medal(rank: number): string {
 function buildLastMatchEmbed(data: LastMatchRanking): EmbedBuilder {
   const playedAt = new Date(data.playedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-  const rows = data.entries
+  const rows = (data.entries ?? [])
     .map(e => `${medal(e.rank)} **${e.player.name}** — Score: \`${e.score}\` | K/D: \`${e.kd}\` | ${e.kills}/${e.deaths}/${e.assists}`)
     .join('\n')
 
@@ -42,7 +42,7 @@ function buildLastMatchEmbed(data: LastMatchRanking): EmbedBuilder {
 function buildOverallEmbed(data: OverallRanking): EmbedBuilder {
   const updatedAt = new Date(data.updatedAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
 
-  const rows = data.entries
+  const rows = (data.entries ?? [])
     .map(e =>
       `${medal(e.rank)} **${e.player.name}** — Score: \`${e.score}\` | K/D: \`${e.kd}\` | WR: \`${e.winRate.toFixed(1)}%\` | ${e.kills}K/${e.deaths}D/${e.assists}A`
     )

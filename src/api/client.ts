@@ -135,7 +135,13 @@ export async function getLastMatchRanking(): Promise<LastMatchRanking | null> {
       }))
     return { matchId: last.id, map: last.map, playedAt: last.endedAt, entries }
   }
-  return apiFetch<LastMatchRanking>('/api/bot/rankings?tipo=ultima')
+  try {
+    const result = await apiFetch<LastMatchRanking>('/api/bot/rankings?tipo=ultima')
+    if (!result?.entries) return null
+    return result
+  } catch {
+    return null
+  }
 }
 
 export async function getOverallRanking(): Promise<OverallRanking | null> {
@@ -154,7 +160,13 @@ export async function getOverallRanking(): Promise<OverallRanking | null> {
     }))
     return { entries, totalMatches: MOCK_MATCHES.length, updatedAt: new Date().toISOString() }
   }
-  return apiFetch<OverallRanking>('/api/bot/rankings?tipo=geral')
+  try {
+    const result = await apiFetch<OverallRanking>('/api/bot/rankings?tipo=geral')
+    if (!result?.entries) return null
+    return result
+  } catch {
+    return null
+  }
 }
 
 export async function submitMatch(payload: SubmitMatch): Promise<SubmitMatchResponse> {

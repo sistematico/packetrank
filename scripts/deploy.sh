@@ -32,8 +32,9 @@ if pnpm run build; then
 
   echo "✅ Configurando contexto SELinux para /opt/packetrank..."
   sudo /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "/opt/packetrank(/.*)?" 2> /dev/null
-  sudo /usr/sbin/restorecon -R /opt/packetrank 2> /dev/null
-  sudo /usr/sbin/restorecon -Rv /home/nginx/.local/share/pnpm/
+  sudo /usr/sbin/semanage fcontext -a -t etc_t "/opt/packetrank(/.*)?" 2> /dev/null
+  sudo /usr/sbin/restorecon -Rv /opt/packetrank 2> /dev/null
+  sudo /usr/sbin/restorecon -Rv /home/nginx/.local/share/pnpm/ 2> /dev/null
  
   # ou force o tipo executável
   #sudo /usr/bin/chcon -t bin_t /home/nginx/.local/share/pnpm/pnpm

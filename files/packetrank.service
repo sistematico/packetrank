@@ -15,7 +15,8 @@ StandardError=journal
 SyslogIdentifier=packetrank
 
 # Variáveis de ambiente — ajuste conforme necessário
-EnvironmentFile=/opt/packetrank/.env
+#EnvironmentFile=/opt/packetrank/.env
+EnvironmentFile=-/opt/packetrank/.env
 
 # Hardening básico
 NoNewPrivileges=true
