@@ -1,0 +1,196 @@
+---
+# Playbook: instala/atualiza o packetrank Discord bot
+#
+# O que este playbook faz:
+#   1. Cria o usuário/grupo de sistema 'packetrank'
+#   2. Cria /opt/packetrank com ownership correto
+#   3. Concede acesso ao usuário de deploy (nginx) via POSIX ACL
+#      → resolve: nginx não tem permissão em /opt/packetrank
+#   4. Configura sudoers para nginx gerenciar o serviço via systemctl
+#   5. Ajusta contexto SELinux de httpd_sys_content_t → var_t
+#      → resolve: SELinux bloqueia execução do node nessa pasta
+#      var_t é acessível por unconfined_service_t (domínio padrão
+#      de serviços customizados no RHEL/OL 9)
+#   6. Instala/atualiza a unit systemd e reinicia o serviço
+#
+# Uso:
+#   ansible-playbook -i inventory.ini playbook.yml
+#
+# Pré-requisitos:
+#   pip install ansible
+#   ansible-galaxy collection install ansible.posix community.general
+
+- name: Install and configure packetrank Discord bot
+  hosts: vps
+  become: true
+
+  vars:
+    app_name: packetrank
+    app_dir: /opt/packetrank
+    app_user: packetrank
+    app_group: packetrank
+    deploy_user: nginx                  # usuário que faz o deploy (git pull, pnpm build)
+    service_src: "{{ playbook_dir }}/../files/packetrank.service"
+
+  tasks:
+
+    # ── 1. Usuário e grupo de sistema ─────────────────────────────────────────
+
+    - name: Create packetrank system group
+      ansible.builtin.group:
+        name: "{{ app_group }}"
+        system: true
+        state: present
+
+    - name: Create packetrank system user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        group: "{{ app_group }}"
+        system: true
+        shell: /sbin/nologin
+        home: "{{ app_dir }}"
+        create_home: false
+        state: present
+
+    # ── 2. Diretório da aplicação ─────────────────────────────────────────────
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: "0755"
+
+    # ── 3. Permissão de escrita para o usuário de deploy (via POSIX ACL) ──────
+    #
+    # Solução para: "com usuário nginx não tenho permissão em /opt/packetrank"
+    #
+    # POSIX ACL é preferível a adicionar nginx ao grupo packetrank porque:
+    #   - Não altera o ownership nem as permissões unix do diretório
+    #   - Pode ser concedida/revogada independentemente
+    #   - default ACL garante que novos arquivos herdem as permissões
+
+    - name: Ensure acl package is installed
+      ansible.builtin.package:
+        name: acl
+        state: present
+
+    - name: Grant {{ deploy_user }} write access via ACL (existing files)
+      ansible.posix.acl:
+        path: "{{ app_dir }}"
+        entity: "{{ deploy_user }}"
+        etype: user
+        permissions: rwx
+        recursive: true
+        state: present
+
+    - name: Grant {{ deploy_user }} write access via default ACL (new files)
+      ansible.posix.acl:
+        path: "{{ app_dir }}"
+        entity: "{{ deploy_user }}"
+        etype: user
+        permissions: rwx
+        default: true
+        state: present
+
+    # ── 4. Sudoers: nginx pode gerenciar o serviço ────────────────────────────
+
+    - name: Allow {{ deploy_user }} to manage packetrank service via systemctl
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/{{ deploy_user }}-{{ app_name }}
+        content: |
+          # Gerado pelo Ansible — não edite manualmente
+          # Permite que {{ deploy_user }} gerencie apenas o serviço packetrank
+          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl start {{ app_name }}.service
+          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl stop {{ app_name }}.service
+          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl restart {{ app_name }}.service
+          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl status {{ app_name }}.service
+          {{ deploy_user }} ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
+        owner: root
+        group: root
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
+    # ── 5. SELinux ────────────────────────────────────────────────────────────
+    #
+    # Solução para: "SELinux vai travar a execução do pnpm run start nesta pasta"
+    #
+    # O script de deploy original usava httpd_sys_content_t — esse tipo é
+    # destinado a conteúdo web servido pelo httpd (Apache/nginx) e só concede
+    # leitura ao processo httpd_t. Para um serviço systemd customizado:
+    #
+    #   - O processo roda como unconfined_service_t (domínio padrão no RHEL 9
+    #     para units sem política SELinux específica)
+    #   - unconfined_service_t tem acesso a var_t (leitura + escrita + exec)
+    #   - node.js (JIT) precisa de execmem; o boolean 'allow_execmem' habilita
+    #     isso para domínios não confinados
+    #
+    # Dependência: collection community.general
+
+    - name: Install SELinux management utilities
+      ansible.builtin.package:
+        name:
+          - policycoreutils-python-utils   # fornece semanage
+          - python3-libsemanage            # binding Python para semanage
+        state: present
+      when: ansible_selinux.status == "enabled"
+
+    - name: Set SELinux file context for app directory (var_t)
+      community.general.sefcontext:
+        target: "{{ app_dir }}(/.*)?"
+        setype: var_t
+        state: present
+      when: ansible_selinux.status == "enabled"
+      notify: Restore SELinux contexts
+
+    - name: Allow node.js execmem (required for JIT compilation under SELinux)
+      ansible.posix.seboolean:
+        name: allow_execmem
+        state: true
+        persistent: true
+      when: ansible_selinux.status == "enabled"
+      # Ignora caso o boolean não exista na política carregada
+      ignore_errors: true  # noqa ignore-errors
+
+    # ── 6. Systemd unit ───────────────────────────────────────────────────────
+
+    - name: Install packetrank systemd unit
+      ansible.builtin.copy:
+        src: "{{ service_src }}"
+        dest: /etc/systemd/system/{{ app_name }}.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd daemon
+        - Restart packetrank service
+
+    - name: Enable packetrank service
+      ansible.builtin.systemd:
+        name: "{{ app_name }}"
+        enabled: true
+        daemon_reload: true
+
+    - name: Ensure packetrank service is started
+      ansible.builtin.systemd:
+        name: "{{ app_name }}"
+        state: started
+
+  # ── Handlers ─────────────────────────────────────────────────────────────────
+
+  handlers:
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Restore SELinux contexts
+      ansible.builtin.command: restorecon -Rv "{{ app_dir }}"
+      register: restorecon_out
+      changed_when: "'Relabeled' in restorecon_out.stdout"
+
+    - name: Restart packetrank service
+      ansible.builtin.systemd:
+        name: "{{ app_name }}"
+        state: restarted
