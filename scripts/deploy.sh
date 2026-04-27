@@ -2,7 +2,7 @@
 
 NAME="packetrank"
 TMPDIR="/tmp/$NAME"
-WORKDIR="/var/www/$NAME"
+WORKDIR="/opt/$NAME"
 SERVICE="${NAME}.service"
 PATH=$PATH:/home/nginx/.local/share/pnpm
 
