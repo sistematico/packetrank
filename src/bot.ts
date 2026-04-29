@@ -44,6 +44,7 @@ for (const cmd of [partida, rank, ranking, novaPartida, recrutar] as Command[]) 
 async function registerCommands(): Promise<void> {
   const rest = new REST().setToken(DISCORD_TOKEN!)
   const body = commands.map(c => c.data.toJSON())
+  console.log(`[register] Comandos carregados: ${commands.map(c => c.data.name).join(', ')}`)
 
   if (DISCORD_GUILD_ID) {
     // Registro instantâneo para o servidor de desenvolvimento
