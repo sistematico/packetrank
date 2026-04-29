@@ -27,65 +27,8 @@ export const data = new SlashCommandBuilder()
   .setDescription('Candidate-se para entrar no clan Packet Loss')
 
 export async function execute(interaction: ChatInputCommandInteraction) {
-  const discordId = interaction.user.id
-
-  // Verifica se já existe candidatura pendente antes de abrir o modal
-  try {
-    const statusResult = await checkRecruitmentStatus(discordId)
-    if (statusResult?.application) {
-      const app = statusResult.application
-
-      const statusLabels: Record<string, string> = {
-        pending: '⏳ Aguardando avaliação',
-        approved: '✅ Aprovado',
-        rejected: '❌ Não aprovado',
-        withdrawn: '🚫 Cancelada',
-      }
-
-      const statusColors: Record<string, number> = {
-        pending: Colors.Yellow,
-        approved: Colors.Green,
-        rejected: Colors.Red,
-        withdrawn: Colors.Grey,
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle('Sua candidatura')
-        .setColor(statusColors[app.status] ?? Colors.Grey)
-        .addFields(
-          { name: 'Nick', value: app.nick, inline: true },
-          { name: 'Status', value: statusLabels[app.status] ?? app.status, inline: true },
-        )
-
-      if (app.createdAt) {
-        embed.addFields({
-          name: 'Enviada em',
-          value: new Date(app.createdAt).toLocaleDateString('pt-BR'),
-          inline: true,
-        })
-      }
-
-      if (app.notes) {
-        embed.addFields({ name: 'Feedback do staff', value: app.notes })
-      }
-
-      if (app.status === 'pending') {
-        embed.setFooter({ text: 'Aguarde — o staff vai entrar em contato.' })
-      } else if (app.status === 'approved') {
-        embed.setFooter({ text: 'Bem-vindo ao clan Packet Loss! 🎉' })
-      } else if (app.status === 'rejected') {
-        embed.setFooter({ text: 'Você pode enviar uma nova candidatura usando /recrutar novamente.' })
-      }
-
-      await interaction.reply({
-        embeds: [embed],
-        flags: MessageFlags.Ephemeral,
-      })
-      return
-    }
-  } catch {
-    // Se a API falhar na checagem, continua e deixa o usuário preencher o form
-  }
+  // O modal deve ser a primeira resposta à interaction (Discord exige resposta em < 3s).
+  // A verificação de candidatura existente é feita após o submit do modal.
 
   // Abre o modal de candidatura
   const modal = new ModalBuilder()
@@ -154,6 +97,63 @@ export async function execute(interaction: ChatInputCommandInteraction) {
   }
 
   await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral })
+
+  const discordId = interaction.user.id
+
+  // Verifica candidatura existente agora que já temos tempo para chamar a API
+  try {
+    const statusResult = await checkRecruitmentStatus(discordId)
+    if (statusResult?.application) {
+      const app = statusResult.application
+
+      const statusLabels: Record<string, string> = {
+        pending: '⏳ Aguardando avaliação',
+        approved: '✅ Aprovado',
+        rejected: '❌ Não aprovado',
+        withdrawn: '🚫 Cancelada',
+      }
+
+      const statusColors: Record<string, number> = {
+        pending: Colors.Yellow,
+        approved: Colors.Green,
+        rejected: Colors.Red,
+        withdrawn: Colors.Grey,
+      }
+
+      const embed = new EmbedBuilder()
+        .setTitle('Sua candidatura')
+        .setColor(statusColors[app.status] ?? Colors.Grey)
+        .addFields(
+          { name: 'Nick', value: app.nick, inline: true },
+          { name: 'Status', value: statusLabels[app.status] ?? app.status, inline: true },
+        )
+
+      if (app.createdAt) {
+        embed.addFields({
+          name: 'Enviada em',
+          value: new Date(app.createdAt).toLocaleDateString('pt-BR'),
+          inline: true,
+        })
+      }
+
+      if (app.notes) {
+        embed.addFields({ name: 'Feedback do staff', value: app.notes })
+      }
+
+      if (app.status === 'pending') {
+        embed.setFooter({ text: 'Aguarde — o staff vai entrar em contato.' })
+      } else if (app.status === 'approved') {
+        embed.setFooter({ text: 'Bem-vindo ao clan Packet Loss! 🎉' })
+      } else if (app.status === 'rejected') {
+        embed.setFooter({ text: 'Você pode enviar uma nova candidatura usando /recrutar novamente.' })
+      }
+
+      await modalInteraction.editReply({ embeds: [embed] })
+      return
+    }
+  } catch {
+    // Se a API falhar na checagem, continua e tenta submeter a candidatura
+  }
 
   const nick = modalInteraction.fields.getTextInputValue('nick').trim()
   const age = modalInteraction.fields.getTextInputValue('age').trim()
