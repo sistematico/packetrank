@@ -64,7 +64,11 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 
 client.once(Events.ClientReady, async c => {
   console.log(`[bot] Online como ${c.user.tag}`)
-  await registerCommands()
+  try {
+    await registerCommands()
+  } catch (err) {
+    console.error('[register] Falha ao registrar comandos:', err)
+  }
 })
 
 client.on(Events.InteractionCreate, async interaction => {
