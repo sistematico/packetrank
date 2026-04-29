@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+export NODE_ENV=production
+
 NAME="packetrank"
 TMPDIR="/tmp/$NAME"
 WORKDIR="/opt/$NAME"
@@ -18,6 +20,8 @@ cp .env .env.production
 
 echo "📥 Instalando dependências..."
 pnpm install
+#pnpm install --frozen-lockfile
+#pnpm prune --prod
 
 #echo "🗃️ Sincronizando banco de dados..."
 #pnpm run push
