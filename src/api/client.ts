@@ -1,4 +1,14 @@
-import type { Match, PlayerRank, LastMatchRanking, OverallRanking, SubmitMatch, SubmitMatchResponse } from './types.js'
+import type {
+  Match,
+  PlayerRank,
+  LastMatchRanking,
+  OverallRanking,
+  SubmitMatch,
+  SubmitMatchResponse,
+  SubmitRecruitment,
+  SubmitRecruitmentResponse,
+  RecruitmentStatusResponse,
+} from './types.js'
 
 // ---------------------------------------------------------------------------
 // Mockup data — substitua pelas rotas reais do packetloss quando disponíveis
@@ -171,4 +181,20 @@ export async function getOverallRanking(): Promise<OverallRanking | null> {
 
 export async function submitMatch(payload: SubmitMatch): Promise<SubmitMatchResponse> {
   return apiPost<SubmitMatchResponse>('/api/bot/partida', payload)
+}
+
+// ---------------------------------------------------------------------------
+// Recrutamento
+// ---------------------------------------------------------------------------
+
+export async function submitRecruitment(payload: SubmitRecruitment): Promise<SubmitRecruitmentResponse> {
+  return apiPost<SubmitRecruitmentResponse>('/api/bot/recrutamento', payload)
+}
+
+export async function checkRecruitmentStatus(discordId: string): Promise<RecruitmentStatusResponse | null> {
+  try {
+    return await apiFetch<RecruitmentStatusResponse>(`/api/bot/recrutamento?discordId=${encodeURIComponent(discordId)}`)
+  } catch {
+    return null
+  }
 }

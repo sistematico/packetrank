@@ -108,3 +108,37 @@ export interface SubmitMatchResponse {
   playedAt: string
   players: (SubmitMatchPlayer & { score: number })[]
 }
+
+// ---------------------------------------------------------------------------
+// Recrutamento do clan
+// ---------------------------------------------------------------------------
+
+export interface SubmitRecruitment {
+  discordId: string
+  nick: string
+  age: string
+  availability: string
+  experience: string
+  motivation: string
+  referral?: string
+}
+
+export interface SubmitRecruitmentResponse {
+  id: string
+  status: 'pending'
+  nick: string
+  message: string
+}
+
+export interface RecruitmentApplication {
+  id: string
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn'
+  nick: string
+  createdAt: string | null
+  reviewedAt: string | null
+  notes: string | null
+}
+
+export interface RecruitmentStatusResponse {
+  application: RecruitmentApplication | null
+}

@@ -1,6 +1,6 @@
 # packetrank
 
-Bot Discord para o site [packetloss.com.br](https://packetloss.com.br) — exibe estatísticas de partidas, rank individual e rankings gerais diretamente em canais Discord via slash commands.
+Bot Discord para o site [packetloss.com.br](https://packetloss.com.br) — exibe estatísticas de partidas, rank individual, rankings gerais e gerencia o recrutamento do clan diretamente via slash commands.
 
 ---
 
@@ -26,7 +26,9 @@ packetrank/
 │   └── commands/
 │       ├── partida.ts         # /partida — detalhes de uma partida
 │       ├── rank.ts            # /rank — rank individual de um jogador
-│       └── ranking.ts         # /ranking — ranking geral (última partida ou acumulado)
+│       ├── ranking.ts         # /ranking — ranking geral (última partida ou acumulado)
+│       ├── nova-partida.ts    # /nova-partida — registra partida (requer permissão)
+│       └── recrutar.ts        # /recrutar — candidatura ao clan
 ├── .env.example               # Variáveis de ambiente necessárias
 ├── tsconfig.json
 └── package.json
@@ -169,6 +171,27 @@ Exibe o ranking geral de jogadores.
 
 ---
 
+### `/recrutar`
+
+Permite que qualquer membro do servidor Discord candidate-se ao clan Packet Loss sem precisar acessar o site.
+
+**Quem pode usar:** qualquer usuário.
+
+**Fluxo:**
+1. Se já houver candidatura, o bot exibe o status atual (pendente, aprovado, rejeitado ou cancelado)
+2. Caso contrário, abre um modal com a ficha de candidatura:
+   - Nick no Among Us
+   - Idade
+   - Disponibilidade semanal
+   - Experiência com Among Us
+   - Por que quer entrar no clan
+3. Os dados são enviados para `POST /api/bot/recrutamento` no site
+4. O bot responde com embed de confirmação
+
+Após a candidatura, o staff pode avaliar no painel admin em `/admin/recrutamento`. O candidato pode acompanhar o status executando `/recrutar` novamente.
+
+---
+
 ### `/nova-partida` *(requer permissão)*
 
 Registra uma nova partida de Among Us. Abre um fluxo interativo via botões e modais.
@@ -190,15 +213,41 @@ Registra uma nova partida de Among Us. Abre um fluxo interativo via botões e mo
 
 O bot consome as seguintes rotas HTTP da aplicação Next.js:
 
-| Método   | Rota                        | Query params                  | Corpo (JSON)               | Descrição                                                        |
-|----------|-----------------------------|-------------------------------|----------------------------|------------------------------------------------------------------|
-| GET      | `/api/bot/partidas`         | —                             | —                          | Lista todas as datas de campeonato registradas                   |
-| GET      | `/api/bot/partida`          | —                             | —                          | Retorna a próxima sessão agendada                                |
-| **POST** | **`/api/bot/partida`**      | —                             | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações     |
-| GET      | `/api/bot/rank`             | `player` *(nick)*             | —                          | Rank individual de um jogador pelo nick                          |
-| GET      | `/api/bot/rankings`         | `tipo` (`ultima` \| `geral`)  | —                          | Ranking da última partida (`ultima`) ou acumulado (`geral`)      |
+| Método   | Rota                              | Query params                  | Corpo (JSON)               | Descrição                                                        |
+|----------|-----------------------------------|-------------------------------|----------------------------|------------------------------------------------------------------|
+| GET      | `/api/bot/partidas`               | —                             | —                          | Lista todas as datas de campeonato registradas                   |
+| GET      | `/api/bot/partida`                | —                             | —                          | Retorna a próxima sessão agendada                                |
+| **POST** | **`/api/bot/partida`**            | —                             | `SubmitMatch` (ver abaixo) | **Cria uma nova partida** com jogadores e calcula pontuações     |
+| GET      | `/api/bot/rank`                   | `player` *(nick)*             | —                          | Rank individual de um jogador pelo nick                          |
+| GET      | `/api/bot/rankings`               | `tipo` (`ultima` \| `geral`)  | —                          | Ranking da última partida (`ultima`) ou acumulado (`geral`)      |
+| GET      | `/api/bot/recrutamento`           | `discordId` *(string)*        | —                          | Status da candidatura de um usuário                              |
+| **POST** | **`/api/bot/recrutamento`**       | —                             | `SubmitRecruitment`        | **Envia candidatura** ao clan Packet Loss                        |
 
-> Para usar o `POST /api/bot/partida` em produção, defina `API_BASE_URL` e `API_TOKEN` no `.env`. Em desenvolvimento, use `USE_MOCK_API=true` para simular a resposta localmente sem precisar do site.
+> Para usar as rotas `POST` em produção, defina `API_BASE_URL` e `API_TOKEN` no `.env`. Em desenvolvimento, use `USE_MOCK_API=true` para simular as rotas de partida/ranking (recrutamento sempre usa a API real).
+
+### `POST /api/bot/recrutamento` — Corpo da requisição (`SubmitRecruitment`)
+
+```ts
+{
+  discordId: string      // Discord ID do candidato
+  nick: string           // Nick no Among Us
+  age: string            // Idade
+  availability: string   // Disponibilidade semanal
+  experience: string     // Experiência com Among Us
+  motivation: string     // Motivação para entrar no clan
+  referral?: string      // Como ficou sabendo (opcional)
+}
+```
+
+**Resposta:**
+```ts
+{
+  id: string
+  status: 'pending'
+  nick: string
+  message: string
+}
+```
 
 ### `GET /api/bot/partidas` → `Match[]`
 

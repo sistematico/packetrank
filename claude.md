@@ -33,7 +33,9 @@ src/
 └── commands/
     ├── partida.ts        # /partida [id] — detalhes de partida
     ├── rank.ts           # /rank [usuario] — rank individual
-    └── ranking.ts        # /ranking [tipo] — ranking última partida ou geral
+    ├── ranking.ts        # /ranking [tipo] — ranking última partida ou geral
+    ├── nova-partida.ts   # /nova-partida — registra partida (requer permissão)
+    └── recrutar.ts       # /recrutar — candidatura ao clan
 ```
 
 ---
@@ -45,6 +47,28 @@ src/
 | `/partida [id]`     | Detalhes de uma partida (padrão: última)              |
 | `/rank [usuario]`   | Rank individual acumulado (padrão: o próprio usuário) |
 | `/ranking [tipo]`   | Ranking `ultima` (padrão) ou `geral` (acumulado)      |
+| `/nova-partida`     | Registra partida de Among Us (requer permissão)       |
+| `/recrutar`         | Candidata-se ao clan Packet Loss                      |
+
+### `/recrutar` — Recrutamento
+
+Permite que qualquer membro do servidor Discord candidate-se ao clan Packet Loss sem precisar acessar o site.
+
+**Fluxo:**
+1. Usuário executa `/recrutar`
+2. Se já houver candidatura, exibe o status atual
+3. Caso contrário, abre modal com a ficha de candidatura
+4. Após submit, dados são enviados para `POST /api/bot/recrutamento` no site
+5. Bot responde com embed de confirmação
+
+**Campos do modal:**
+- Nick no Among Us (obrigatório)
+- Idade (obrigatório)
+- Disponibilidade semanal (obrigatório)
+- Experiência com Among Us (obrigatório)
+- Por que quer entrar no clan (obrigatório)
+
+**Permissão:** Qualquer usuário (não requer cargo especial).
 
 ---
 
@@ -57,23 +81,25 @@ src/
 | `DISCORD_GUILD_ID` | (Opcional) Server ID para registro instantâneo em dev        |
 | `API_BASE_URL`     | Base URL da API — default `https://packetloss.com.br`        |
 | `USE_MOCK_API`     | `true` para forçar dados de mockup                           |
+| `API_TOKEN`        | Token Bearer para rotas POST autenticadas (`/api/bot/partida`, `/api/bot/recrutamento`) |
+| `ALLOWED_ROLE_ID`  | IDs de cargo Discord com permissão para `/nova-partida` (separados por vírgula) |
+| `ALLOWED_USER_IDS` | IDs de usuário Discord com permissão para `/nova-partida` (separados por vírgula) |
 
 ---
 
-## Rotas de API esperadas no packetloss (Next.js)
+## Rotas de API disponíveis no packetloss (Next.js)
 
-Estas rotas ainda **não existem** no site — precisam ser criadas em `src/app/api/`:
+| Método | Rota | Auth | Descrição |
+|--------|------|------|-----------|
+| GET | `/api/bot/rankings` | — | Ranking total e semanal de todos os players |
+| GET | `/api/bot/rank?player=<nick>` | — | Rank individual por nick |
+| GET | `/api/bot/partidas` | — | Lista todas as sessões de campeonato |
+| GET | `/api/bot/partida` | — | Próxima sessão agendada |
+| POST | `/api/bot/partida` | Bearer token | Registra partida de Among Us |
+| GET | `/api/bot/recrutamento?discordId=<id>` | — | Consulta status de candidatura |
+| POST | `/api/bot/recrutamento` | Bearer token | Envia candidatura ao clan |
 
-| Método | Rota                     | Descrição                                      |
-|--------|--------------------------|------------------------------------------------|
-| GET    | `/api/matches`           | Lista todas as partidas                        |
-| GET    | `/api/matches/last`      | Última partida registrada                      |
-| GET    | `/api/matches/[id]`      | Partida específica por ID                      |
-| GET    | `/api/rank/[discordId]`  | Rank individual pelo Discord ID do jogador     |
-| GET    | `/api/ranking/last`      | Ranking da última partida                      |
-| GET    | `/api/ranking/overall`   | Ranking geral acumulado                        |
-
-Enquanto as rotas não existem, o bot usa **mockup estático** definido no topo de `src/api/client.ts`.
+O bot usa **mockup estático** (`USE_MOCK_API=true`) apenas para as rotas de partida/ranking quando a API não está disponível. As rotas de recrutamento nunca usam mockup.
 
 ---
 
@@ -166,10 +192,29 @@ pnpm check          # verifica tipos sem compilar
 
 ---
 
-## Próximos passos
+## Tipos de recrutamento
 
-1. Criar as rotas de API no site `packetloss` (Next.js App Router)
-2. Definir o schema Drizzle para `matches` e `match_players`
-3. Criar endpoints de criação de partida (admin) para popular o banco
-4. Desativar o mockup quando as rotas estiverem prontas (`USE_MOCK_API=false`)
-5. Adicionar comando `/partidas` para listar histórico paginado
+### `SubmitRecruitment`
+```ts
+{
+  discordId: string
+  nick: string
+  age: string
+  availability: string
+  experience: string
+  motivation: string
+  referral?: string
+}
+```
+
+### `RecruitmentApplication`
+```ts
+{
+  id: string
+  status: 'pending' | 'approved' | 'rejected' | 'withdrawn'
+  nick: string
+  createdAt: string | null
+  reviewedAt: string | null
+  notes: string | null
+}
+```
